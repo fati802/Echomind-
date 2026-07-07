@@ -1,26 +1,37 @@
 @import "tailwindcss";
 
+@theme {
+  --color-teal-50: #f0f7f5;
+  --color-teal-100: #dcece8;
+  --color-teal-500: #4A8B7C;
+  --color-teal-600: #3c7265;
+  --color-cream: #F7F5F2;
+  --color-cream-darker: #efece7;
+  --color-dark: #2B2B2B;
+  --color-gold: #C9A66B;
+  --color-gold-darker: #b2915b;
+  --font-sans: 'Outfit', 'Inter', var(--font-geist-sans), sans-serif;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #F7F5F2;
+  --foreground: #2B2B2B;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Outfit', 'Inter', var(--font-geist-sans), sans-serif;
+  min-height: 100vh;
+}
+
+/* Ensure accessible and friendly focus rings */
+input:focus, button:focus {
+  outline: 2px solid #4A8B7C;
+  outline-offset: 2px;
+}
+
+/* Smooth transitions for collapsible referenced events */
+.transition-collapse {
+  transition: max-height 0.3s ease-in-out, opacity 0.2s ease-in-out;
 }

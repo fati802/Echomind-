@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.database import init_db
 from backend.routers.events import router as events_router
 from backend.routers.query import router as query_router
+from backend.routers.timeline import router as timeline_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -26,6 +27,7 @@ app.add_middleware(
 # Include routers
 app.include_router(events_router)
 app.include_router(query_router)
+app.include_router(timeline_router)
 
 @app.get("/api/health")
 def health_check():
