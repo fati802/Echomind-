@@ -8,7 +8,10 @@ from unittest.mock import patch, MagicMock
 # Override database URL for testing
 TEST_DATABASE_URL = "sqlite:///./data/test_query_echomind.db"
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
-os.environ["FIREWORKS_API_KEY"] = "fake-api-key"
+
+# Helper to clean environment before import
+if "FIREWORKS_API_KEY" in os.environ:
+    del os.environ["FIREWORKS_API_KEY"]
 
 from backend.database import Base, get_db
 from backend.main import app
@@ -57,7 +60,7 @@ def client(db_session):
         yield c
     app.dependency_overrides.clear()
 
-def test_query_existing_event(client):
+def test_query_matching_mock_mode(client):
     # Ingest an event to match
     payload = {
         "object": "keys",
@@ -71,42 +74,35 @@ def test_query_existing_event(client):
     response = client.post("/api/ingest", json=payload)
     assert response.status_code == 201
 
-    # Mock the LLM HTTP post response
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {
-        "choices": [
-            {
-                "message": {
-                    "content": "You placed your keys on the study table at 02:15 PM."
-                }
-            }
-        ]
-    }
-
-    # Patch httpx.post inside backend.services.llm
-    with patch("backend.services.llm.httpx.post", return_value=mock_response) as mock_post:
+    # Ensure API key is missing
+    with patch.dict(os.environ, {}):
+        if "FIREWORKS_API_KEY" in os.environ:
+            del os.environ["FIREWORKS_API_KEY"]
+            
         query_payload = {"question": "Where are my keys?"}
         response = client.post("/api/query", json=query_payload)
         
         assert response.status_code == 200
         data = response.json()
-        assert data["answer"] == "You placed your keys on the study table at 02:15 PM."
+        assert "keys" in data["answer"]
+        assert "study table" in data["answer"]
+        assert data["mode"] == "mock"
         assert len(data["referenced_events"]) >= 1
         assert data["referenced_events"][0]["object"] == "keys"
-        
-        # Verify that mock was called
-        mock_post.assert_called_once()
 
-def test_query_no_matching_events(client):
-    # Search for something that doesn't match anything in the database
-    query_payload = {"question": "Where is my remote?"}
-    response = client.post("/api/query", json=query_payload)
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert data["answer"] == "I don't have a record of that yet"
-    assert data["referenced_events"] == []
+def test_query_no_matching_events_mock_mode(client):
+    with patch.dict(os.environ, {}):
+        if "FIREWORKS_API_KEY" in os.environ:
+            del os.environ["FIREWORKS_API_KEY"]
+            
+        query_payload = {"question": "Where is my remote?"}
+        response = client.post("/api/query", json=query_payload)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["answer"] == "I don't have a record of that yet"
+        assert data["referenced_events"] == []
+        assert data["mode"] == "mock"
 
 def test_query_malformed_question(client):
     # 1. Empty string
@@ -121,7 +117,7 @@ def test_query_malformed_question(client):
     response = client.post("/api/query", json={})
     assert response.status_code == 422
 
-def test_ask_alias_route(client):
+def test_ask_alias_mock_mode(client):
     # Ingest an event to match
     payload = {
         "object": "mug",
@@ -135,24 +131,55 @@ def test_ask_alias_route(client):
     response = client.post("/api/ingest", json=payload)
     assert response.status_code == 201
 
-    mock_response = MagicMock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {
-        "choices": [
-            {
-                "message": {
-                    "content": "The caregiver was observed with a mug at 03:30 PM."
-                }
-            }
-        ]
-    }
-
-    with patch("backend.services.llm.httpx.post", return_value=mock_response) as mock_post:
+    with patch.dict(os.environ, {}):
+        if "FIREWORKS_API_KEY" in os.environ:
+            del os.environ["FIREWORKS_API_KEY"]
+            
         query_payload = {"question": "Who had the mug?"}
         response = client.post("/api/ask", json=query_payload)
         
         assert response.status_code == 200
         data = response.json()
         assert "mug" in data["answer"]
+        assert data["mode"] == "mock"
         assert len(data["referenced_events"]) >= 1
-        mock_post.assert_called_once()
+
+def test_query_live_mode_with_mock_api(client):
+    # Ingest an event to match
+    payload = {
+        "object": "glasses",
+        "action": "placed",
+        "actor": "patient",
+        "zone": "dining table",
+        "timestamp": "2026-07-07T14:15:00",
+        "confidence": 0.88,
+        "source_frame": "glasses_frame.jpg"
+    }
+    response = client.post("/api/ingest", json=payload)
+    assert response.status_code == 201
+
+    # Force API key to be set
+    with patch.dict(os.environ, {"FIREWORKS_API_KEY": "fake-api-key"}):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "choices": [
+                {
+                    "message": {
+                        "content": "You placed your glasses on the dining table."
+                    }
+                }
+            ]
+        }
+
+        # Mock the request inside llm.py
+        with patch("backend.services.llm.httpx.post", return_value=mock_response) as mock_post:
+            query_payload = {"question": "Where are my glasses?"}
+            response = client.post("/api/query", json=query_payload)
+            
+            assert response.status_code == 200
+            data = response.json()
+            assert data["answer"] == "You placed your glasses on the dining table."
+            assert data["mode"] == "live"
+            assert len(data["referenced_events"]) >= 1
+            mock_post.assert_called_once()

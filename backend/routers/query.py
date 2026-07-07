@@ -19,11 +19,12 @@ def query_echomind(payload: QueryRequest, db: Session = Depends(get_db)):
     events = retrieve_relevant_events(question, db)
     
     # 2. Call LLM wrapper to generate a warm, patient, strictly grounded answer
-    answer = generate_grounded_answer(question, events)
+    answer, mode = generate_grounded_answer(question, events)
     
     return QueryResponse(
         answer=answer,
-        referenced_events=events
+        referenced_events=events,
+        mode=mode
     )
 
 @router.post("/api/ask", response_model=QueryResponse)
