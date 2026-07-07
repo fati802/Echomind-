@@ -10,31 +10,52 @@ def generate_mock_answer(events: list) -> str:
     if not events:
         return "I don't have a record of that yet"
         
+    has_more = len(events) > 5
+    recent_events = events[:5]
+    
+    # Sort the 5 most recent chronologically (oldest first)
+    recent_events = sorted(recent_events, key=lambda e: e.timestamp)
+    
+    action_map = {
+        "placed": "placed",
+        "picked_up": "picked up",
+        "handed_over": "handed over",
+        "observed": "observed"
+    }
+    
     sentences = []
-    for event in events:
+    for event in recent_events:
+        action_str = action_map.get(event.action, event.action)
         actor_str = f"by {event.actor}" if event.actor else ""
         zone_str = f"in/on the {event.zone}" if event.zone else "somewhere"
         dt_str = event.timestamp.strftime("%I:%M %p on %B %d, %Y")
         
-        # Build a comforting sentence matching the action
-        if event.action == "placed":
-            sentence = f"Your {event.object} was placed {actor_str} {zone_str} at {dt_str}."
-        elif event.action == "picked_up":
-            sentence = f"Your {event.object} was picked up {actor_str} {zone_str} at {dt_str}."
-        elif event.action == "handed_over":
-            sentence = f"Your {event.object} was handed over {actor_str} {zone_str} at {dt_str}."
+        # Determine confidence level hedging
+        if event.confidence >= 0.85:
+            # Plain statement
+            sentence = f"Your {event.object} was {action_str} {actor_str} {zone_str} at {dt_str}."
+        elif 0.6 <= event.confidence < 0.85:
+            # Hedge gently
+            sentence = f"It looks like your {event.object} was {action_str} {actor_str} {zone_str} at {dt_str}."
         else:
-            sentence = f"Your {event.object} was observed {actor_str} {zone_str} at {dt_str}."
+            # Hedge strongly and suggest confirming
+            sentence = f"I think I saw your {event.object} {action_str} {actor_str} {zone_str} at {dt_str}, but I'm not fully sure — you may want to double check."
             
+        # Clean up spaces
+        sentence = " ".join(sentence.split())
         sentences.append(sentence)
+        
+    if has_more and sentences:
+        # Strip the period from the last sentence and append the has_more phrase
+        sentences[-1] = sentences[-1].rstrip('.') + ", and a few earlier events."
         
     return " ".join(sentences)
 
-def generate_grounded_answer(question: str, events: list) -> tuple[str, str]:
+def generate_grounded_answer(question: str, events: list, conversation_history: list = None) -> tuple[str, str]:
     """
     Generates a grounded answer from events using Fireworks AI or a rule-based mock fallback.
     Returns:
-        (answer, mode) - where mode is 'live' or 'mock'
+        (answer, mode) - where mode is 'live', 'mock', or 'mock_fallback'
     """
     # 1. If no events are retrieved, return the exact fallback string immediately
     if not events:
@@ -45,15 +66,33 @@ def generate_grounded_answer(question: str, events: list) -> tuple[str, str]:
         logger.info("FIREWORKS_API_KEY is missing or empty. Running in MOCK mode.")
         return generate_mock_answer(events), "mock"
         
+    # Multi-event: Keep 5 most recent, sort chronologically
+    has_more = len(events) > 5
+    events_to_use = events[:5]
+    events_to_use = sorted(events_to_use, key=lambda e: e.timestamp)
+    
     # Format events list as readable context for the prompt
     formatted_events = []
-    for event in events:
+    for event in events_to_use:
         actor_str = event.actor if event.actor else "someone"
         zone_str = event.zone if event.zone else "an unknown area"
         dt_str = event.timestamp.strftime("%I:%M %p on %B %d, %Y")
+        
+        # Classify certainty based on confidence
+        if event.confidence >= 0.85:
+            certainty = "Certain"
+        elif 0.6 <= event.confidence < 0.85:
+            certainty = "Likely"
+        else:
+            certainty = "Unsure"
+            
         formatted_events.append(
-            f"- At {dt_str}: {actor_str} {event.action} the {event.object} in/on the {zone_str}."
+            f"- At {dt_str}: {actor_str} {event.action} the {event.object} in/on the {zone_str}. [Certainty: {certainty}]"
         )
+        
+    if has_more:
+        formatted_events.append("- (Note: There are also a few earlier events matching this query that are not listed here)")
+        
     context = "\n".join(formatted_events)
     
     system_prompt = (
@@ -64,7 +103,13 @@ def generate_grounded_answer(question: str, events: list) -> tuple[str, str]:
         "2. If the context does not contain the answer to the question, you must respond with EXACTLY: "
         "\"I don't have a record of that yet\" - do not add any explanation, greetings, or details.\n"
         "3. Keep the tone warm, comforting, plain-language, and reassuring.\n"
-        "4. Never produce medical advice, health diagnoses, or treatment recommendations.\n\n"
+        "4. Never produce medical advice, health diagnoses, or treatment recommendations.\n"
+        "5. The Certainty tag of each event determines how certain it is. Adapt your response phrasing based on the Certainty:\n"
+        "   - If Certainty is 'Certain', state the fact plainly without any hedging (e.g. 'Your glasses were placed on the kitchen shelf...').\n"
+        "   - If Certainty is 'Likely', hedge gently using phrases like 'It looks like...' or 'It seems that...'.\n"
+        "   - If Certainty is 'Unsure', hedge strongly and suggest checking (e.g. 'I think I saw... but I'm not fully sure — you may want to double check.').\n"
+        "6. Do not include raw confidence numbers, 'Certainty', 'Certain', 'Likely', or 'Unsure' tags in your output response. Only use them to guide your phrasing.\n"
+        "7. If there are earlier events not listed (indicated by the Note in context), you must append ', and a few earlier events.' to the end of your answer.\n\n"
         f"Event Log Context:\n{context}"
     )
     
@@ -75,12 +120,18 @@ def generate_grounded_answer(question: str, events: list) -> tuple[str, str]:
         "Content-Type": "application/json"
     }
     
+    messages = [{"role": "system", "content": system_prompt}]
+    if conversation_history:
+        for turn in conversation_history:
+            q = turn.question if hasattr(turn, "question") else turn.get("question", "")
+            a = turn.answer if hasattr(turn, "answer") else turn.get("answer", "")
+            messages.append({"role": "user", "content": q})
+            messages.append({"role": "assistant", "content": a})
+    messages.append({"role": "user", "content": question})
+    
     payload = {
         "model": "accounts/fireworks/models/llama-v3p1-8b-instruct",
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": question}
-        ],
+        "messages": messages,
         "temperature": 0.0,
         "max_tokens": 150
     }
@@ -91,11 +142,41 @@ def generate_grounded_answer(question: str, events: list) -> tuple[str, str]:
             result = response.json()
             answer = result["choices"][0]["message"]["content"].strip()
             if not answer:
-                return generate_mock_answer(events), "mock"
+                return generate_mock_answer(events), "mock_fallback"
+                
+            # Grounding validation
+            if answer.lower() == "i don't have a record of that yet":
+                return answer, "live"
+                
+            # Extract key detail words from the events
+            key_words = set()
+            for event in events_to_use:
+                if event.object:
+                    key_words.add(event.object.lower())
+                if event.zone:
+                    key_words.add(event.zone.lower())
+                    # Split words to also check parts of zone (e.g. "kitchen" or "shelf")
+                    for w in event.zone.lower().split():
+                        if w not in ["the", "in", "on", "at", "a", "an", "of", "and"]:
+                            key_words.add(w)
+                if event.action:
+                    action_clean = event.action.lower().replace("_", " ")
+                    key_words.add(action_clean)
+                    for w in action_clean.split():
+                        key_words.add(w)
+            
+            # Check if any key details are referenced in the answer (case-insensitive substring check)
+            answer_lower = answer.lower()
+            has_grounding = any(kw in answer_lower for kw in key_words)
+            if not has_grounding:
+                logger.warning(f"LLM grounding validation failed. LLM returned: '{answer}'. Falling back to mock template.")
+                return generate_mock_answer(events), "mock_fallback"
+                
             return answer, "live"
         else:
             logger.error(f"Fireworks AI API error: {response.status_code} - {response.text}. Falling back to MOCK mode.")
-            return generate_mock_answer(events), "mock"
+            return generate_mock_answer(events), "mock_fallback"
     except httpx.RequestError as e:
         logger.error(f"Network error calling Fireworks AI: {str(e)}. Falling back to MOCK mode.")
-        return generate_mock_answer(events), "mock"
+        return generate_mock_answer(events), "mock_fallback"
+
