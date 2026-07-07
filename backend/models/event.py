@@ -1,12 +1,10 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime
-from sqlalchemy.orm import declarative_base
-
-Base = declarative_base()
+from backend.database import Base
 
 class Event(Base):
     __tablename__ = "events"
 
-    id = Column(Integer, primary key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     object = Column(String, nullable=False)
     action = Column(String, nullable=False)
     actor = Column(String, nullable=True)
