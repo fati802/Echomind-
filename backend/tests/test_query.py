@@ -190,16 +190,17 @@ def test_query_live_mode_with_mock_api(client):
             assert response.status_code == 200
             data = response.json()
             assert data["answer"] == "You placed your glasses on the dining table."
-            assert data["mode"] == "live"
+            assert data["mode"] == "fireworks_fallback"
             assert len(data["referenced_events"]) >= 1
             mock_post.assert_called_once()
 
 def test_multi_event_chronological_mock(client):
+    today_str = datetime.date.today().isoformat()
     # Ingest 3 events in reverse chronological order
     events_data = [
-        {"object": "glasses", "action": "placed", "actor": "patient", "zone": "dining table", "timestamp": "2026-07-07T09:00:00", "confidence": 0.90},
-        {"object": "glasses", "action": "picked_up", "actor": "patient", "zone": "dining table", "timestamp": "2026-07-07T10:00:00", "confidence": 0.90},
-        {"object": "glasses", "action": "placed", "actor": "patient", "zone": "study table", "timestamp": "2026-07-07T11:00:00", "confidence": 0.90},
+        {"object": "glasses", "action": "placed", "actor": "patient", "zone": "dining table", "timestamp": f"{today_str}T09:00:00", "confidence": 0.90},
+        {"object": "glasses", "action": "picked_up", "actor": "patient", "zone": "dining table", "timestamp": f"{today_str}T10:00:00", "confidence": 0.90},
+        {"object": "glasses", "action": "placed", "actor": "patient", "zone": "study table", "timestamp": f"{today_str}T11:00:00", "confidence": 0.90},
     ]
     for ev in events_data:
         client.post("/api/ingest", json=ev)
@@ -221,9 +222,9 @@ def test_multi_event_chronological_mock(client):
     
     # Now ingest 3 more events (total 6 events) to test capping at 5
     extra_events = [
-        {"object": "glasses", "action": "picked_up", "actor": "patient", "zone": "study table", "timestamp": "2026-07-07T12:00:00", "confidence": 0.90},
-        {"object": "glasses", "action": "placed", "actor": "patient", "zone": "bedside shelf", "timestamp": "2026-07-07T13:00:00", "confidence": 0.90},
-        {"object": "glasses", "action": "picked_up", "actor": "patient", "zone": "bedside shelf", "timestamp": "2026-07-07T14:00:00", "confidence": 0.90},
+        {"object": "glasses", "action": "picked_up", "actor": "patient", "zone": "study table", "timestamp": f"{today_str}T12:00:00", "confidence": 0.90},
+        {"object": "glasses", "action": "placed", "actor": "patient", "zone": "bedside shelf", "timestamp": f"{today_str}T13:00:00", "confidence": 0.90},
+        {"object": "glasses", "action": "picked_up", "actor": "patient", "zone": "bedside shelf", "timestamp": f"{today_str}T14:00:00", "confidence": 0.90},
     ]
     for ev in extra_events:
         client.post("/api/ingest", json=ev)
@@ -373,4 +374,95 @@ def test_graceful_degradation_and_validation(client):
             # It should discard the LLM output and return the mock response instead
             assert "Your wallet was placed" in data["answer"]
             assert data["mode"] == "mock_fallback"
+
+
+def test_call_llm_provider_tries_amd_first():
+    from backend.services.llm import call_llm_provider
+    
+    with patch.dict(os.environ, {
+        "LLM_PROVIDER": "amd",
+        "AMD_DEV_CLOUD_API_URL": "http://fake-amd-endpoint",
+        "AMD_DEV_CLOUD_API_KEY": "fake-amd-key"
+    }):
+        # Mock call_amd_dev_cloud to return successfully
+        with patch("backend.services.llm.call_amd_dev_cloud", return_value="AMD answer") as mock_amd, \
+             patch("backend.services.llm.call_fireworks") as mock_fireworks:
+            
+            ans, mode = call_llm_provider("Where are my keys?", "System prompt")
+            assert ans == "AMD answer"
+            assert mode == "amd"
+            mock_amd.assert_called_once()
+            mock_fireworks.assert_not_called()
+
+
+def test_call_llm_provider_fallback_to_fireworks():
+    from backend.services.llm import call_llm_provider
+    
+    with patch.dict(os.environ, {
+        "LLM_PROVIDER": "amd",
+        "AMD_DEV_CLOUD_API_URL": "http://fake-amd-endpoint",
+        "AMD_DEV_CLOUD_API_KEY": "fake-amd-key",
+        "FIREWORKS_API_KEY": "fake-fw-key"
+    }):
+        # Mock call_amd_dev_cloud to raise an error, and call_fireworks to succeed
+        with patch("backend.services.llm.call_amd_dev_cloud", side_effect=Exception("AMD failed")) as mock_amd, \
+             patch("backend.services.llm.call_fireworks", return_value="Fireworks answer") as mock_fw:
+             
+            ans, mode = call_llm_provider("Where are my keys?", "System prompt")
+            assert ans == "Fireworks answer"
+            assert mode == "fireworks_fallback"
+            mock_amd.assert_called_once()
+            mock_fw.assert_called_once()
+
+
+def test_call_llm_provider_fallback_to_mock_when_both_fail():
+    from backend.services.llm import call_llm_provider
+    from backend.models.event import Event
+    import datetime
+    
+    with patch.dict(os.environ, {
+        "LLM_PROVIDER": "amd",
+        "AMD_DEV_CLOUD_API_URL": "http://fake-amd-endpoint",
+        "AMD_DEV_CLOUD_API_KEY": "fake-amd-key",
+        "FIREWORKS_API_KEY": "fake-fw-key"
+    }):
+        # Mock both to fail
+        with patch("backend.services.llm.call_amd_dev_cloud", side_effect=Exception("AMD failed")) as mock_amd, \
+             patch("backend.services.llm.call_fireworks", side_effect=Exception("Fireworks failed")) as mock_fw:
+             
+            events = [
+                Event(
+                    id=1,
+                    object="keys",
+                    action="placed",
+                    actor="patient",
+                    zone="study table",
+                    timestamp=datetime.datetime(2026, 7, 7, 14, 15, 0),
+                    confidence=0.9
+                )
+            ]
+            ans, mode = call_llm_provider("Where are my keys?", "System prompt", events=events)
+            assert "keys" in ans
+            assert "study table" in ans
+            assert mode == "mock_fallback"
+            mock_amd.assert_called_once()
+            mock_fw.assert_called_once()
+
+
+def test_llm_status_endpoint(client):
+    with patch.dict(os.environ, {
+        "LLM_PROVIDER": "amd",
+        "AMD_DEV_CLOUD_API_URL": "http://fake-amd-endpoint",
+        "AMD_DEV_CLOUD_API_KEY": "fake-amd-key",
+        "FIREWORKS_API_KEY": "fake-fw-key"
+    }):
+        with patch("backend.main.llm.check_amd_health", return_value=True) as mock_amd_health, \
+             patch("backend.main.llm.check_fireworks_health", return_value=True) as mock_fw_health:
+             
+            response = client.get("/api/llm-status")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["primary_provider"] == "amd"
+            assert data["amd_reachable"] is True
+            assert data["mock_effective_fallback"] is False
 
