@@ -82,7 +82,7 @@ def call_fireworks(prompt: str, system_prompt: str, conversation_history: list =
         "model": "accounts/fireworks/models/glm-5p2",
         "messages": messages,
         "temperature": 0.0,
-        "max_tokens": 150
+        "max_tokens": 400
     }
 
     response = httpx.post(url, headers=headers, json=payload, timeout=10.0)
@@ -291,7 +291,15 @@ def generate_grounded_answer(question: str, events: list, conversation_history: 
         "   - If Certainty is 'Likely', hedge gently using phrases like 'It looks like...' or 'It seems that...'.\n"
         "   - If Certainty is 'Unsure', hedge strongly and suggest checking (e.g. 'I think I saw... but I'm not fully sure — you may want to double check.').\n"
         "6. Do not include raw confidence numbers, 'Certainty', 'Certain', 'Likely', or 'Unsure' tags in your output response. Only use them to guide your phrasing.\n"
-        "7. If there are earlier events not listed (indicated by the Note in context), you must append ', and a few earlier events.' to the end of your answer.\n\n"
+        "7.If there are earlier events not listed (indicated by the Note in context), you must append ', and a few earlier events.' to the end of your answer.\n"
+        "8. CRITICAL: Respond with ONLY your final answer. Do NOT show your reasoning, thinking process, "
+        "step-by-step analysis, or a chronological breakdown of events. Do not write phrases like 'Let me look at...' "
+        "or 'Looking at the events...'. Give a short, direct, warm answer as if speaking naturally to the patient — "
+        "nothing else.\n"
+        "9. For simple direct questions (e.g. 'Where are my X?', 'Who gave me X?'), answer using ONLY the single most "
+        "recent/relevant event — do not list out every matching event in the log. Keep it to 1-2 short sentences. "
+        "Only mention multiple events if the question explicitly asks about a range, history, or 'today' as a whole "
+        "(e.g. 'What happened today?', 'Where has my X been today?').\n\n"
         f"Event Log Context:\n{context}"
     )
 
