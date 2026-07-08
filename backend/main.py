@@ -1,4 +1,5 @@
 import os
+import backend.config
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -39,28 +40,33 @@ def health_check():
 def get_llm_status():
     provider = os.getenv("LLM_PROVIDER", "amd").lower().strip()
     amd_configured = bool(os.getenv("AMD_DEV_CLOUD_API_URL") and os.getenv("AMD_DEV_CLOUD_API_KEY"))
-    fireworks_configured = bool(os.getenv("FIREWORKS_API_KEY"))
+    fireworks_key_present = bool(os.getenv("FIREWORKS_API_KEY"))
 
     amd_reachable = False
     if amd_configured:
         amd_reachable = llm.check_amd_health()
 
-    fireworks_reachable = False
-    if fireworks_configured:
-        fireworks_reachable = llm.check_fireworks_health()
-
-    # Determine if mock mode is the effective fallback
-    if provider == "mock":
-        mock_fallback = True
-    elif provider == "amd":
-        mock_fallback = not (amd_reachable or fireworks_reachable)
+    # Determine effective mode
+    if provider == "amd":
+        if amd_reachable:
+            effective_mode = "amd"
+        elif fireworks_key_present:
+            effective_mode = "fireworks_fallback"
+        else:
+            effective_mode = "mock_fallback"
     elif provider == "fireworks":
-        mock_fallback = not (fireworks_reachable or amd_reachable)
+        if fireworks_key_present:
+            effective_mode = "fireworks"
+        elif amd_reachable:
+            effective_mode = "amd"
+        else:
+            effective_mode = "mock_fallback"
     else:
-        mock_fallback = True
+        effective_mode = "mock"
 
     return {
-        "primary_provider": provider,
+        "configured_provider": provider,
         "amd_reachable": amd_reachable,
-        "mock_effective_fallback": mock_fallback
+        "fireworks_key_present": fireworks_key_present,
+        "effective_mode": effective_mode
     }

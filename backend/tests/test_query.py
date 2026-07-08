@@ -169,7 +169,7 @@ def test_query_live_mode_with_mock_api(client):
     assert response.status_code == 201
 
     # Force API key to be set
-    with patch.dict(os.environ, {"FIREWORKS_API_KEY": "fake-api-key"}):
+    with patch.dict(os.environ, {"FIREWORKS_API_KEY": "fake-api-key", "LLM_PROVIDER": "fireworks"}):
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
@@ -462,7 +462,8 @@ def test_llm_status_endpoint(client):
             response = client.get("/api/llm-status")
             assert response.status_code == 200
             data = response.json()
-            assert data["primary_provider"] == "amd"
+            assert data["configured_provider"] == "amd"
             assert data["amd_reachable"] is True
-            assert data["mock_effective_fallback"] is False
+            assert data["fireworks_key_present"] is True
+            assert data["effective_mode"] == "amd"
 

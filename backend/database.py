@@ -1,10 +1,12 @@
 import os
+from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from dotenv import load_dotenv
 
-# Load env variables
-load_dotenv()
+# Load env variables using an absolute path relative to this file
+dotenv_path = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=dotenv_path)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/echomind.db")
 

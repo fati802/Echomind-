@@ -5,6 +5,12 @@ from backend.models.event import Event
 
 logger = logging.getLogger(__name__)
 
+def is_configured(val: str) -> bool:
+    if not val:
+        return False
+    val_clean = val.strip()
+    return val_clean not in ["", "your_key_here", "your_endpoint_here"]
+
 def generate_mock_answer(events: list) -> str:
     """Generates a warm, simple, rule-based response directly from the events."""
     if not events:
@@ -54,7 +60,7 @@ def generate_mock_answer(events: list) -> str:
 def call_fireworks(prompt: str, system_prompt: str, conversation_history: list = None) -> str:
     """Calls Fireworks AI Chat Completion API."""
     api_key = os.getenv("FIREWORKS_API_KEY")
-    if not api_key:
+    if not is_configured(api_key):
         raise ValueError("FIREWORKS_API_KEY is missing or empty.")
 
     url = "https://api.fireworks.ai/inference/v1/chat/completions"
@@ -73,7 +79,7 @@ def call_fireworks(prompt: str, system_prompt: str, conversation_history: list =
     messages.append({"role": "user", "content": prompt})
 
     payload = {
-        "model": "accounts/fireworks/models/llama-v3p1-8b-instruct",
+        "model": "accounts/fireworks/models/glm-5p2",
         "messages": messages,
         "temperature": 0.0,
         "max_tokens": 150
@@ -93,7 +99,7 @@ def call_amd_dev_cloud(prompt: str, system_prompt: str, conversation_history: li
     api_url = os.getenv("AMD_DEV_CLOUD_API_URL")
     api_key = os.getenv("AMD_DEV_CLOUD_API_KEY")
 
-    if not api_url or not api_key:
+    if not is_configured(api_url) or not is_configured(api_key):
         raise ValueError("AMD Developer Cloud API URL or API Key is missing or empty.")
 
     messages = [{"role": "system", "content": system_prompt}]
@@ -237,8 +243,8 @@ def generate_grounded_answer(question: str, events: list, conversation_history: 
     fireworks_key = os.getenv("FIREWORKS_API_KEY")
     provider = os.getenv("LLM_PROVIDER", "amd").lower().strip()
 
-    # If provider is explicitly set to mock, or if both api keys are missing/empty, run in mock mode
-    if provider == "mock" or (not amd_key and not fireworks_key):
+    # If provider is explicitly set to mock, or if both api keys are missing/empty/placeholder, run in mock mode
+    if provider == "mock" or (not is_configured(amd_key) and not is_configured(fireworks_key)):
         logger.info("No LLM provider keys set or provider is 'mock'. Running in MOCK mode.")
         return generate_mock_answer(events), "mock"
 
@@ -290,7 +296,7 @@ def generate_grounded_answer(question: str, events: list, conversation_history: 
     )
 
     # Call cascading LLM provider router
-    answer, mode = call_llm_provider(question, system_prompt, conversation_history, events_to_use)
+    answer, mode = call_llm_provider(question, system_prompt, conversation_history, events)
 
     if mode in ["amd", "fireworks_fallback"]:
         # Grounding validation
