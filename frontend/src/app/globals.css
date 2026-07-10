@@ -1,15 +1,28 @@
 @import "tailwindcss";
 
 @theme {
-  --color-teal-50: #f0f7f5;
-  --color-teal-100: #dcece8;
-  --color-teal-500: #4A8B7C;
-  --color-teal-600: #3c7265;
+  --color-teal-50: #E3F0EC;
+  --color-teal-100: #C5E3DB;
+  --color-teal-500: #2E8B6F;
+  --color-teal-600: #1D6B5C;
+  --color-teal-700: #16544A;
+
+  --color-rose-50: #FBEFF3;
+  --color-rose-100: #F0C9D9;
+  --color-rose-600: #7A2E4A;
+
   --color-cream: #F7F5F2;
   --color-cream-darker: #efece7;
   --color-dark: #2B2B2B;
-  --color-gold: #C9A66B;
-  --color-gold-darker: #b2915b;
+
+  --color-warning-50: #FAEEDA;
+  --color-warning-500: #BA7517;
+  --color-warning-700: #854F0B;
+
+  --color-critical-50: #FCEBEB;
+  --color-critical-500: #A32D2D;
+  --color-critical-700: #501313;
+
   --font-sans: 'Outfit', 'Inter', var(--font-geist-sans), sans-serif;
 }
 
@@ -25,13 +38,11 @@ body {
   min-height: 100vh;
 }
 
-/* Ensure accessible and friendly focus rings */
 input:focus, button:focus {
-  outline: 2px solid #4A8B7C;
+  outline: 2px solid #1D6B5C;
   outline-offset: 2px;
 }
 
-/* Smooth transitions for collapsible referenced events */
 .transition-collapse {
   transition: max-height 0.3s ease-in-out, opacity 0.2s ease-in-out;
 }
