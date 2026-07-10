@@ -1,9 +1,12 @@
+.venv/
 venv/
 __pycache__/
 *.pyc
 node_modules/
 .next/
-.env
 data/*.db
-demo-video/*
-.DS_Store
+uploads/*
+!uploads/.gitkeep
+*.pt
+.env
+*.env

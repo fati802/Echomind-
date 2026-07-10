@@ -9,7 +9,7 @@ from backend.routers.events import router as events_router
 from backend.routers.query import router as query_router
 from backend.routers.timeline import router as timeline_router
 from backend.services import llm
-
+from backend.routers.upload import router as upload_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize database tables on startup
@@ -31,7 +31,7 @@ app.add_middleware(
 app.include_router(events_router)
 app.include_router(query_router)
 app.include_router(timeline_router)
-
+app.include_router(upload_router)
 @app.get("/api/health")
 def health_check():
     return {"status": "ok"}
