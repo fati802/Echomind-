@@ -1,5 +1,6 @@
 import { Outfit, Inter } from "next/font/google";
 import "./globals.css";
+import AlertBanner from "@/components/AlertBanner";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -24,6 +25,9 @@ export default function RootLayout({ children }) {
       className={`${outfit.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-cream text-dark font-sans">
+        <div className="px-4 pt-4 max-w-3xl mx-auto w-full">
+          <AlertBanner />
+        </div>
         {children}
       </body>
     </html>
