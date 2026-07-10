@@ -1,6 +1,6 @@
 import { Outfit, Inter } from "next/font/google";
 import "./globals.css";
-import AlertBanner from "@/components/AlertBanner";
+import AlertBanner from "@/app/components/AlertBanner";
 
 const outfit = Outfit({
   variable: "--font-outfit",
