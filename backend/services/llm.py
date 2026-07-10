@@ -85,7 +85,7 @@ def call_fireworks(prompt: str, system_prompt: str, conversation_history: list =
         "max_tokens": 400
     }
 
-    response = httpx.post(url, headers=headers, json=payload, timeout=10.0)
+    response = httpx.post(url, headers=headers, json=payload, timeout=60.0)
     response.raise_for_status()
 
     result = response.json()
@@ -223,7 +223,7 @@ def check_fireworks_health() -> bool:
             "messages": [{"role": "user", "content": "ping"}],
             "max_tokens": 1
         }
-        response = httpx.post(url, headers=headers, json=payload, timeout=5.0)
+        response = httpx.post(url, headers=headers, json=payload, timeout=30.0)
         return response.status_code == 200
     except Exception as e:
         logger.error(f"Fireworks health check failed: {str(e)}")
