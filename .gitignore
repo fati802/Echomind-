@@ -10,3 +10,4 @@ uploads/*
 *.pt
 .env
 *.env
+perception/data/raw_footage/

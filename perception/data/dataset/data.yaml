@@ -1,0 +1,5 @@
+path: C:/Users/user/Desktop/EchoMind/perception/data/dataset
+train: images/train
+val: images/val
+nc: 5
+names: ['glasses', 'medicine box', 'keys', 'remote', 'mug']

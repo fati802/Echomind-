@@ -5,7 +5,7 @@ from pathlib import Path
 RAW_DIR = Path(__file__).resolve().parent.parent / "data" / "raw_footage"
 OUT_DIR = Path(__file__).resolve().parent.parent / "data" / "labeled" / "images"
 FRAME_STEP = 3  # save every Nth frame (denser than the 0.5s sampling used elsewhere)
-SOURCE_SCENES = ["scene1_placement.mp4", "scene2_pickup_move.mp4"]
+SOURCE_SCENES = ["scene1_placement.mp4", "scene2_pickup_move.mp4", "handsoff.mp4"]
 
 
 def extract(video_path: Path, out_dir: Path, frame_step: int = FRAME_STEP):
