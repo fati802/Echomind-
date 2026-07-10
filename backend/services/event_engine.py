@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
 
-MOVEMENT_THRESHOLD = 40   # pixels — object ko "moved" maana jayega agar isse zyada shift ho
-GONE_FRAME_GAP = 20       # itne frames tak object gayab rahe to "picked_up" maanenge
+MOVEMENT_THRESHOLD = 40
+GONE_FRAME_GAP = 20
+MIN_EVENTS_FOR_PICKUP = 2
 
 
 def _centroid(det):
@@ -66,7 +67,7 @@ def generate_events(detections: list, fps: float = 30.0, total_frames: int = Non
 
             prev = det
 
-        if total_frames - prev["frame"] > GONE_FRAME_GAP:
+        if total_frames - prev["frame"] > GONE_FRAME_GAP and len(dets) >= MIN_EVENTS_FOR_PICKUP:
             ts = base_time + timedelta(seconds=prev["frame"] / fps)
             events.append(_base_event(obj_name, "picked_up", prev, ts))
 
