@@ -11,6 +11,28 @@ def is_configured(val: str) -> bool:
     val_clean = val.strip()
     return val_clean not in ["", "your_key_here", "your_endpoint_here"]
 
+GREETING_PHRASES = {
+    "hi", "hello", "hey", "hii", "hiya", "yo", "hola",
+    "good morning", "good afternoon", "good evening",
+    "how are you", "whats up", "what's up", "sup",
+    "thanks", "thank you", "ok", "okay", "bye", "goodbye"
+}
+
+def is_greeting_or_smalltalk(question: str) -> bool:
+    """Detects simple greetings/small talk that shouldn't hit the event-log search."""
+    normalized = question.strip().lower().rstrip("!?.")
+    if normalized in GREETING_PHRASES:
+        return True
+    if len(normalized) <= 3 and normalized.isalpha():
+        return True
+    return False
+
+def generate_greeting_reply() -> str:
+    return (
+        "Hello! I'm here to help you remember things about your day. "
+        "You can ask me things like 'Where are my glasses?' or 'Did I take my medicine today?'"
+    )
+
 def generate_mock_answer(events: list) -> str:
     """Generates a warm, simple, rule-based response directly from the events."""
     if not events:
@@ -235,6 +257,10 @@ def generate_grounded_answer(question: str, events: list, conversation_history: 
     Returns:
         (answer, mode) - where mode is 'amd', 'fireworks_fallback', 'mock', or 'mock_fallback'
     """
+    # 0. Catch greetings/small talk before touching the event log
+    if is_greeting_or_smalltalk(question):
+        return generate_greeting_reply(), "greeting"
+
     # 1. If no events are retrieved, return the exact fallback string immediately
     if not events:
         return "I don't have a record of that yet", "mock"
