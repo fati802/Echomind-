@@ -1,0 +1,122 @@
+[
+    {
+        "object": "medicine box",
+        "action": "handed_over",
+        "actor": "caregiver",
+        "zone": "living room",
+        "timestamp": "2026-07-10T09:12:13.070000",
+        "confidence": 0.78,
+        "source_frame": "scene3_handoff/scene3_handoff_f0026_t13.07s.jpg",
+        "id": 12
+    },
+    {
+        "object": "medicine box",
+        "action": "picked_up",
+        "actor": "caregiver",
+        "zone": "refrigerator",
+        "timestamp": "2026-07-10T09:12:05.030000",
+        "confidence": 0.74,
+        "source_frame": "scene3_handoff/scene3_handoff_f0010_t5.03s.jpg",
+        "id": 11
+    },
+    {
+        "object": "medicine box",
+        "action": "placed",
+        "actor": "patient",
+        "zone": "refrigerator",
+        "timestamp": "2026-07-10T09:05:24.390000",
+        "confidence": 0.904,
+        "source_frame": "scene2_pickup_move/scene2_pickup_move_f0049_t24.39s.jpg",
+        "id": 10
+    },
+    {
+        "object": "medicine box",
+        "action": "picked_up",
+        "actor": "patient",
+        "zone": "table",
+        "timestamp": "2026-07-10T09:05:17.920000",
+        "confidence": 0.921,
+        "source_frame": "scene2_pickup_move/scene2_pickup_move_f0036_t17.92s.jpg",
+        "id": 9
+    },
+    {
+        "object": "remote",
+        "action": "placed",
+        "actor": "patient",
+        "zone": "remote holder",
+        "timestamp": "2026-07-10T09:05:09.950000",
+        "confidence": 0.848,
+        "source_frame": "scene2_pickup_move/scene2_pickup_move_f0020_t9.95s.jpg",
+        "id": 8
+    },
+    {
+        "object": "remote",
+        "action": "picked_up",
+        "actor": "patient",
+        "zone": "table",
+        "timestamp": "2026-07-10T09:05:08.460000",
+        "confidence": 0.719,
+        "source_frame": "scene2_pickup_move/scene2_pickup_move_f0017_t8.46s.jpg",
+        "id": 7
+    },
+    {
+        "object": "glasses",
+        "action": "placed",
+        "actor": "patient",
+        "zone": "book shelf",
+        "timestamp": "2026-07-10T09:05:05.970000",
+        "confidence": 0.94,
+        "source_frame": "scene2_pickup_move/scene2_pickup_move_f0012_t5.97s.jpg",
+        "id": 6
+    },
+    {
+        "object": "mug",
+        "action": "placed",
+        "actor": "patient",
+        "zone": "living room table",
+        "timestamp": "2026-07-10T09:00:15.180000",
+        "confidence": 0.847,
+        "source_frame": "scene1_placement/scene1_placement_f0030_t15.18s.jpg",
+        "id": 5
+    },
+    {
+        "object": "remote",
+        "action": "placed",
+        "actor": "patient",
+        "zone": "remote holder",
+        "timestamp": "2026-07-10T09:00:11.640000",
+        "confidence": 0.927,
+        "source_frame": "scene1_placement/scene1_placement_f0023_t11.64s.jpg",
+        "id": 4
+    },
+    {
+        "object": "keys",
+        "action": "placed",
+        "actor": "patient",
+        "zone": "key holder",
+        "timestamp": "2026-07-10T09:00:07.590000",
+        "confidence": 0.922,
+        "source_frame": "scene1_placement/scene1_placement_f0015_t7.59s.jpg",
+        "id": 3
+    },
+    {
+        "object": "medicine box",
+        "action": "placed",
+        "actor": "patient",
+        "zone": "table",
+        "timestamp": "2026-07-10T09:00:05.570000",
+        "confidence": 0.947,
+        "source_frame": "scene1_placement/scene1_placement_f0011_t5.57s.jpg",
+        "id": 2
+    },
+    {
+        "object": "glasses",
+        "action": "placed",
+        "actor": "patient",
+        "zone": "table",
+        "timestamp": "2026-07-10T09:00:01.520000",
+        "confidence": 0.893,
+        "source_frame": "scene1_placement/scene1_placement_f0003_t1.52s.jpg",
+        "id": 1
+    }
+]
