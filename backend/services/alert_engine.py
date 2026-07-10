@@ -51,6 +51,11 @@ def generate_alerts(db: Session) -> List[AlertResponse]:
 
         if elapsed_min >= threshold:
             severity = "critical" if elapsed_min >= threshold * 2 else "warning"
+            display_name = object_name.strip().capitalize()
+            hours = int(elapsed_min // 60)
+            mins = int(elapsed_min % 60)
+            time_str = f"{hours}h {mins}m" if hours > 0 else f"{mins} min"
+
             alerts.append(
                 AlertResponse(
                     object=object_name,
@@ -59,7 +64,7 @@ def generate_alerts(db: Session) -> List[AlertResponse]:
                     last_action=last_event.action,
                     last_seen=last_event.timestamp,
                     minutes_elapsed=round(elapsed_min, 1),
-                    message=f"{object_name} has not been returned for {int(elapsed_min)} minutes.",
+                    message=f"You haven't put the {display_name} back yet — it's been {time_str}.",
                     severity=severity,
                 )
             )
