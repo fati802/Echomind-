@@ -1,24 +1,78 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Link from "next/link";
+
+const SUGGESTIONS = [
+  "Where are my glasses?",
+  "Did I take my medicine today?",
+  "When did I last see my keys?",
+  "What did I do this morning?",
+];
+
+function SendIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 19V5" />
+      <polyline points="5 12 12 5 19 12" />
+    </svg>
+  );
+}
+
+function AssistantMark() {
+  return (
+    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-50 to-white border border-teal-100 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-[0_2px_8px_rgba(29,107,92,0.12)]">
+      <svg width="22" height="22" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        {/* outer echo arc */}
+        <path
+          d="M6 16a10 10 0 0 1 3-7.1"
+          stroke="#2E8B6F"
+          strokeOpacity="0.55"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+        <path
+          d="M26 16a10 10 0 0 1-3 7.1"
+          stroke="#2E8B6F"
+          strokeOpacity="0.55"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+        {/* inner echo arc */}
+        <path
+          d="M10 16a6 6 0 0 1 2-4.5"
+          stroke="#1D6B5C"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+        <path
+          d="M22 16a6 6 0 0 1-2 4.5"
+          stroke="#1D6B5C"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+        {/* center heart */}
+        <path
+          d="M16 20.5s-4-2.6-4-5.7a2.4 2.4 0 0 1 4-1.7 2.4 2.4 0 0 1 4 1.7c0 3.1-4 5.7-4 5.7z"
+          fill="#7A2E4A"
+        />
+      </svg>
+    </div>
+  );
+}
 
 export default function Home() {
   const [messages, setMessages] = useState([
     {
       id: "initial-greet",
       sender: "system",
-      text: "Hello! I am EchoMind, your memory companion. How can I help you feel comfortable and recall your day? You can ask me things like 'Where are my glasses?' or 'Did I take my medicine today?'",
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }
+      text: "Hello, I'm EchoMind — your gentle memory companion. Ask me anything about your day.",
+      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    },
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
-  
-  // Track expanded message IDs for referenced events
   const [expandedEvents, setExpandedEvents] = useState({});
-
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -30,30 +84,23 @@ export default function Home() {
   }, [messages, isLoading]);
 
   const toggleEvents = (msgId) => {
-    setExpandedEvents(prev => ({
-      ...prev,
-      [msgId]: !prev[msgId]
-    }));
+    setExpandedEvents((prev) => ({ ...prev, [msgId]: !prev[msgId] }));
   };
 
-  const handleSend = async (e) => {
-    e.preventDefault();
-    const queryText = inputValue.trim();
+  const submitQuery = async (queryText) => {
     if (!queryText) return;
-
-    // Clear error
     setErrorMsg(null);
 
-    // Add user message
     const userMsgId = `user-${Date.now()}`;
-    const userMessage = {
-      id: userMsgId,
-      sender: "user",
-      text: queryText,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: userMsgId,
+        sender: "user",
+        text: queryText,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      },
+    ]);
     setInputValue("");
     setIsLoading(true);
 
@@ -61,9 +108,7 @@ export default function Home() {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
       const response = await fetch(`${apiUrl}/api/query`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: queryText }),
       });
 
@@ -72,17 +117,17 @@ export default function Home() {
       }
 
       const data = await response.json();
-      
-      const assistantMsgId = `assistant-${Date.now()}`;
-      const assistantMessage = {
-        id: assistantMsgId,
-        sender: "assistant",
-        text: data.answer || "I don't have a record of that yet",
-        referencedEvents: data.referenced_events || [],
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `assistant-${Date.now()}`,
+          sender: "assistant",
+          text: data.answer || "I don't have a record of that yet",
+          referencedEvents: data.referenced_events || [],
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
     } catch (err) {
       console.error(err);
       setErrorMsg(err.message || "Something went wrong. Please try again.");
@@ -91,194 +136,207 @@ export default function Home() {
     }
   };
 
-  // Human friendly formatting for event logs
+  const handleSend = (e) => {
+    e.preventDefault();
+    submitQuery(inputValue.trim());
+  };
+
   const formatTime = (isoString) => {
     try {
-      const date = new Date(isoString);
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (e) {
+      return new Date(isoString).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    } catch {
       return isoString;
     }
   };
 
-  return (
-    <div className="flex flex-col min-h-screen bg-cream">
-      {/* Premium Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-teal-100 py-4 px-6 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <span className="text-2xl" role="img" aria-label="flower">🌸</span>
-          <span className="text-2xl font-semibold tracking-tight text-teal-600 font-sans">EchoMind</span>
-        </div>
-        <nav className="flex space-x-6 text-lg font-medium" aria-label="Primary Navigation">
-          <Link 
-            id="nav-chat" 
-            href="/" 
-            className="text-teal-600 border-b-2 border-teal-500 pb-1"
-          >
-            Ask Questions
-          </Link>
-          <Link 
-            id="nav-timeline" 
-            href="/timeline" 
-            className="text-dark/70 hover:text-teal-600 transition-colors pb-1"
-          >
-            My Day's Timeline
-          </Link>
-          <Link 
-            id="nav-upload" 
-            href="/upload" 
-            className="text-dark/70 hover:text-teal-600 transition-colors pb-1"
-          >
-            Upload Video
-          </Link>
-        </nav>
-      </header>
+  const isEmptyState = messages.length === 1 && messages[0].sender === "system";
 
-      {/* Main chat window container */}
-      <main className="flex-1 flex flex-col max-w-3xl w-full mx-auto p-4 sm:p-6 justify-between">
-        <h1 className="sr-only">EchoMind Caring Chat Assistant</h1>
-        
-        {/* Messages List */}
-        <div className="flex-1 overflow-y-auto mb-6 space-y-6 min-h-[400px] pr-2">
-          {messages.map((msg) => {
-            const isUser = msg.sender === "user";
-            const isSystem = msg.sender === "system";
-            
-            return (
-              <div 
-                key={msg.id}
-                className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}
-              >
-                {/* Bubble */}
-                <div 
-                  className={`max-w-[85%] rounded-2xl p-5 shadow-sm text-lg leading-relaxed ${
-                    isUser 
-                      ? "bg-teal-100 text-dark rounded-tr-none border border-teal-500/20"
-                      : isSystem
-                        ? "bg-teal-50/80 text-dark border-l-4 border-teal-500"
-                        : "bg-white text-dark rounded-tl-none border border-cream-darker"
-                  }`}
-                >
-                  <p>{msg.text}</p>
-                  
-                  {/* Referenced Events (collapsible) */}
-                  {msg.referencedEvents && msg.referencedEvents.length > 0 && (
-                    <div className="mt-4 pt-3 border-t border-cream-darker text-base">
-                      <button
-                        id={`btn-toggle-events-${msg.id}`}
-                        onClick={() => toggleEvents(msg.id)}
-                        className="text-teal-600 hover:text-teal-500 font-medium flex items-center gap-1 focus:outline-none transition-colors cursor-pointer"
-                        aria-expanded={!!expandedEvents[msg.id]}
-                        aria-controls={`events-details-${msg.id}`}
-                      >
-                        <span>{expandedEvents[msg.id] ? "▼ Hide memory records" : "▶ Show memory records"}</span>
-                        <span className="text-xs bg-teal-50 px-2 py-0.5 rounded-full text-teal-600 border border-teal-100">
-                          {msg.referencedEvents.length}
-                        </span>
-                      </button>
-                      
-                      {expandedEvents[msg.id] && (
-                        <div 
-                          id={`events-details-${msg.id}`} 
-                          className="mt-3 space-y-2 bg-cream/70 p-3 rounded-lg border border-cream-darker"
-                        >
-                          <p className="text-xs font-semibold uppercase tracking-wider text-dark/60 mb-2">
-                            Events I remembered for this answer:
-                          </p>
-                          <ul className="space-y-2">
-                            {msg.referencedEvents.map((evt, idx) => (
-                              <li 
-                                key={evt.id || idx}
-                                className="text-sm text-dark bg-white/90 p-2.5 rounded border border-cream-darker"
-                              >
-                                <div className="font-semibold text-teal-600 capitalize">
-                                  {evt.object} — {evt.action.replace('_', ' ')}
-                                </div>
-                                <div className="text-xs text-dark/70 mt-1 flex justify-between">
-                                  <span>Location: {evt.zone || "Unknown Area"}</span>
-                                  <span>Time: {formatTime(evt.timestamp)}</span>
-                                </div>
-                                {evt.actor && (
-                                  <div className="text-xs text-dark/60 mt-0.5">
-                                    Person involved: <span className="capitalize">{evt.actor}</span>
+  return (
+    <div className="flex-1 flex flex-col w-full min-h-[calc(100vh-64px)]">
+      <h1 className="sr-only">EchoMind Caring Chat Assistant</h1>
+
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-5xl mx-auto w-full px-5 sm:px-8 lg:px-12 py-10">
+          {isEmptyState ? (
+            <div className="text-center pt-16 pb-6">
+              <p className="text-xs uppercase tracking-[0.22em] text-teal-600 font-medium mb-3">
+                EchoMind
+              </p>
+              <h2 className="text-3xl sm:text-4xl font-semibold text-dark tracking-tight">
+                How can I help you remember?
+              </h2>
+              <p className="text-base text-dark/55 mt-3 max-w-xl mx-auto">
+                Ask me anything about your day — where you left something, what you did, or how it went.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {messages.map((msg) => {
+                if (msg.sender === "system" && msg.id === "initial-greet") return null;
+
+                const isUser = msg.sender === "user";
+
+                if (isUser) {
+                  return (
+                    <div key={msg.id} className="flex justify-end fade-in">
+                      <div className="max-w-[85%] bg-teal-600 text-white rounded-3xl rounded-br-lg px-5 py-3 text-[1.02rem] leading-relaxed">
+                        {msg.text}
+                      </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={msg.id} className="flex gap-3 fade-in">
+                    <AssistantMark />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[1.02rem] leading-relaxed text-dark whitespace-pre-wrap">
+                        {msg.text}
+                      </div>
+
+                      {msg.referencedEvents && msg.referencedEvents.length > 0 && (
+                        <div className="mt-4">
+                          <button
+                            id={`btn-toggle-events-${msg.id}`}
+                            onClick={() => toggleEvents(msg.id)}
+                            className="text-teal-700 hover:text-teal-500 font-medium text-sm flex items-center gap-2 cursor-pointer"
+                            aria-expanded={!!expandedEvents[msg.id]}
+                            aria-controls={`events-details-${msg.id}`}
+                          >
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              className={`transition-transform ${expandedEvents[msg.id] ? "rotate-90" : ""}`}
+                              aria-hidden="true"
+                            >
+                              <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                            <span>{expandedEvents[msg.id] ? "Hide" : "Show"} memory records</span>
+                            <span className="chip bg-teal-50 text-teal-700 border border-teal-100">
+                              {msg.referencedEvents.length}
+                            </span>
+                          </button>
+
+                          {expandedEvents[msg.id] && (
+                            <div id={`events-details-${msg.id}`} className="mt-3 space-y-2 fade-in">
+                              {msg.referencedEvents.map((evt, idx) => (
+                                <div
+                                  key={evt.id || idx}
+                                  className="text-sm bg-cream/70 border border-cream-darker rounded-xl p-3"
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="text-left">
+                                      <div className="font-semibold text-teal-700 capitalize">
+                                        {evt.object} — {evt.action.replace("_", " ")}
+                                      </div>
+                                      <div className="text-xs text-dark/60 mt-1">
+                                        {evt.zone || "Unknown Area"}
+                                        {evt.actor && (
+                                          <>
+                                            {" · "}
+                                            <span className="capitalize">{evt.actor}</span>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <span className="text-xs font-mono text-dark/50 whitespace-nowrap">
+                                      {formatTime(evt.timestamp)}
+                                    </span>
                                   </div>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-                  )}
+                  </div>
+                );
+              })}
 
-                  {/* Time label */}
-                  <span className="block text-right text-xs text-dark/40 mt-2 font-mono">
-                    {msg.timestamp}
-                  </span>
+              {isLoading && (
+                <div className="flex gap-3 fade-in">
+                  <AssistantMark />
+                  <div className="flex items-center gap-2 text-dark/50 pt-1.5">
+                    <div className="flex space-x-1.5" aria-hidden="true">
+                      <div className="w-2 h-2 bg-teal-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
+                      <div className="w-2 h-2 bg-teal-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
+                      <div className="w-2 h-2 bg-teal-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              )}
 
-          {/* Loading bubble */}
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="bg-white border border-cream-darker rounded-2xl rounded-tl-none p-5 shadow-sm text-lg text-dark/60 flex items-center space-x-2">
-                <div className="flex space-x-1" aria-hidden="true">
-                  <div className="w-2.5 h-2.5 bg-teal-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-2.5 h-2.5 bg-teal-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-2.5 h-2.5 bg-teal-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              {errorMsg && (
+                <div
+                  id="chat-error-state"
+                  className="bg-critical-50 border border-critical-500/40 text-critical-700 rounded-2xl p-4 text-sm fade-in"
+                  role="alert"
+                >
+                  <div className="font-semibold mb-0.5">I had a little trouble</div>
+                  <p className="text-critical-700/85">{errorMsg}</p>
                 </div>
-                <span>Checking my memories...</span>
-              </div>
-            </div>
-          )}
-
-          {/* Error Alert */}
-          {errorMsg && (
-            <div 
-              id="chat-error-state" 
-              className="bg-critical-50 border border-critical-500 text-critical-700 rounded-xl p-4 text-base shadow-sm"
-              role="alert"
-            >
-              <div className="font-semibold text-lg mb-1">Oh dear, I had a little trouble:</div>
-              <p>{errorMsg}</p>
+              )}
             </div>
           )}
 
           <div ref={messagesEndRef} />
         </div>
+      </div>
 
-        {/* Input Bar */}
-        <form onSubmit={handleSend} className="bg-white rounded-2xl shadow-md border border-teal-100 p-2 flex items-center space-x-2">
-          <input
-            id="chat-input-question"
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Ask me a question (e.g., 'Did I take my medicine?')"
-            className="flex-1 bg-transparent py-4 px-4 text-lg border-0 focus:outline-none placeholder-dark/40 text-dark min-h-[56px]"
-            disabled={isLoading}
-            autoComplete="off"
-          />
-          <button
-            id="btn-chat-send"
-            type="submit"
-            disabled={isLoading || !inputValue.trim()}
-            className="bg-teal-500 hover:bg-teal-600 text-white font-semibold text-lg py-3 px-6 rounded-xl transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed hover:shadow cursor-pointer flex items-center justify-center min-h-[48px]"
+      {/* Bottom input area — always at bottom, wider */}
+      <div className="sticky bottom-0 bg-gradient-to-t from-cream via-cream/95 to-cream/0 pt-6 pb-5">
+        <div className="max-w-5xl mx-auto w-full px-5 sm:px-8 lg:px-12">
+          {isEmptyState && (
+            <div className="mb-4 flex flex-wrap gap-2 justify-center">
+              {SUGGESTIONS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => submitQuery(s)}
+                  className="text-sm px-4 py-2 rounded-full bg-white border border-teal-100 text-dark/70 hover:border-teal-500 hover:text-teal-700 hover:bg-teal-50/40 transition-colors cursor-pointer"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <form
+            onSubmit={handleSend}
+            className="w-full bg-white rounded-3xl border border-teal-100/70 shadow-[0_4px_30px_rgba(45,90,78,0.08)] flex items-end gap-2 p-2 pl-6 transition-all focus-within:border-teal-500/60 focus-within:shadow-[0_4px_30px_rgba(45,90,78,0.14)] min-h-[68px]"
           >
-            Ask Me
-          </button>
-        </form>
-      </main>
+            <input
+              id="chat-input-question"
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Ask EchoMind about your day..."
+              className="flex-1 bg-transparent py-3 text-base border-0 focus:outline-none placeholder-dark/35 text-dark"
+              disabled={isLoading}
+              autoComplete="off"
+            />
+            <button
+              id="btn-chat-send"
+              type="submit"
+              disabled={isLoading || !inputValue.trim()}
+              aria-label="Send"
+              className="bg-teal-600 hover:bg-teal-700 text-white h-12 w-12 rounded-2xl transition-all disabled:opacity-25 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center flex-shrink-0"
+            >
+              <SendIcon />
+            </button>
+          </form>
 
-      {/* Reassuring footer */}
-      <footer className="py-6 border-t border-teal-100 text-center text-sm text-dark/50">
-        <p>EchoMind is always here to help you remember. Your privacy is fully protected.</p>
-      </footer>
+          <p className="text-center text-[0.7rem] text-dark/35 mt-2">
+            EchoMind can make mistakes. Please verify important details.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
-
-
-
