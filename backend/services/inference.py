@@ -21,7 +21,7 @@ def load_model():
     return _model
 
 
-def process_video(video_path: str, conf_threshold: float = 0.3, frame_skip: int = 5):
+def process_video(video_path: str, conf_threshold: float = 0.3, frame_skip: int = 12):
     model = load_model()
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -37,7 +37,7 @@ def process_video(video_path: str, conf_threshold: float = 0.3, frame_skip: int 
             break
 
         if frame_count % frame_skip == 0:
-            results = model.predict(frame, conf=conf_threshold, verbose=False)
+            results = model.predict(frame, conf=conf_threshold, verbose=False, imgsz=320)
             for r in results:
                 for box in r.boxes:
                     cls_name = model.names[int(box.cls)]

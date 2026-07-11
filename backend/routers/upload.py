@@ -15,7 +15,7 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 
 
 @router.post("/api/upload-video")
-async def upload_video(file: UploadFile = File(...)):
+def upload_video(file: UploadFile = File(...)):
 
     if not file.content_type.startswith("video/"):
         raise HTTPException(status_code=400, detail="Please upload a video file.")
