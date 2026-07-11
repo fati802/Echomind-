@@ -124,6 +124,13 @@ export default function Home() {
           >
             My Day's Timeline
           </Link>
+          <Link 
+            id="nav-upload" 
+            href="/upload" 
+            className="text-dark/70 hover:text-teal-600 transition-colors pb-1"
+          >
+            Upload Video
+          </Link>
         </nav>
       </header>
 
@@ -165,7 +172,7 @@ export default function Home() {
                         aria-controls={`events-details-${msg.id}`}
                       >
                         <span>{expandedEvents[msg.id] ? "▼ Hide memory records" : "▶ Show memory records"}</span>
-                        <span className="text-xs bg-teal-550 px-2 py-0.5 rounded-full text-teal-600 border border-teal-100">
+                        <span className="text-xs bg-teal-50 px-2 py-0.5 rounded-full text-teal-600 border border-teal-100">
                           {msg.referencedEvents.length}
                         </span>
                       </button>
@@ -231,7 +238,7 @@ export default function Home() {
           {errorMsg && (
             <div 
               id="chat-error-state" 
-              className="bg-red-50 border border-red-200 text-red-800 rounded-xl p-4 text-base shadow-sm"
+              className="bg-critical-50 border border-critical-500 text-critical-700 rounded-xl p-4 text-base shadow-sm"
               role="alert"
             >
               <div className="font-semibold text-lg mb-1">Oh dear, I had a little trouble:</div>
@@ -272,3 +279,6 @@ export default function Home() {
     </div>
   );
 }
+
+
+
